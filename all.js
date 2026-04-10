@@ -13,7 +13,7 @@ const CONFIG = {
     // 請填入您的 GCP Client ID
     CLIENT_ID: '348171925674-ul60mjahmul6kj13gtb5bvtj132ubh9c.apps.googleusercontent.com',
     // 請填入您的 GCP API Key
-    API_KEY: 'AIzaSyBYJribZBC2bAcg3P6BL_nhuRnTpBdtWmA',
+    API_KEY: 'AIzaSyBNTTHMb8eo7njyP7F8hCq4rAvW4oVpNQA',
     // 請填入您的 Google Sheet ID
     SPREADSHEET_ID: '1-5ANiCBdR7ET1Qe6jCtNv5W4n7RmgC3f8OOtUWS5PWg',
 
@@ -314,6 +314,7 @@ async function checkUserPermission(email) {
         });
 
         const rows = response.result.values;
+        console.log("Users sheet rows:", rows);
         if (!rows || rows.length === 0) return null;
 
         // 尋找 Email 匹配的列
@@ -334,7 +335,20 @@ async function checkUserPermission(email) {
 }
 
 async function loadAppArgs() {
-    showLoading('載入菜單中...');
+    hideLoading(); // 確保全螢幕 loading 隱藏
+    const container = document.getElementById('menu-container');
+    // 渲染骨架屏
+    container.innerHTML = Array(6).fill().map(() => `
+        <div class="card menu-item">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-price"></div>
+            <div class="skeleton skeleton-cat"></div>
+            <div class="skeleton skeleton-input"></div>
+            <div class="skeleton skeleton-btn"></div>
+        </div>
+    `).join('');
+    document.getElementById('app-section').classList.remove('hidden');
+
     try {
         // 1. 取得今日餐廳設定
         const todayConfig = await getTodayRestaurants();
@@ -345,14 +359,10 @@ async function loadAppArgs() {
 
         // 3. 渲染介面
         renderMenu(todayConfig, allMenu);
-
-        hideLoading();
-        document.getElementById('app-section').classList.remove('hidden');
-
     } catch (err) {
         console.error("Error loading app data:", err);
         alert("載入資料失敗，請檢查網路或 API 設定。");
-        hideLoading();
+        container.innerHTML = '<p>載入失敗，請重試。</p>';
     }
 }
 
@@ -393,8 +403,16 @@ function renderMenu(todayRestaurants, allMenu) {
     const container = document.getElementById('menu-container');
     container.innerHTML = '';
 
+    const emptyStateHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">🍽️</div>
+            <h3>今天老闆還沒放飯</h3>
+            <p>請稍候，或是提醒管理員設定今日餐廳！</p>
+        </div>
+    `;
+
     if (todayRestaurants.length === 0) {
-        container.innerHTML = '<p>今日尚未設定餐廳，請稍候或聯繫管理員。</p>';
+        container.innerHTML = emptyStateHTML;
         return;
     }
 
@@ -402,7 +420,13 @@ function renderMenu(todayRestaurants, allMenu) {
     const todayMenu = allMenu.filter(item => todayRestaurants.includes(item.restaurant));
 
     if (todayMenu.length === 0) {
-        container.innerHTML = '<p>找不到今日餐廳的菜單資料。</p>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">😢</div>
+                <h3>找不到今日菜單</h3>
+                <p>請確認菜單表單 (Menu) 中是否有對應的餐廳與餐點。</p>
+            </div>
+        `;
         return;
     }
 
